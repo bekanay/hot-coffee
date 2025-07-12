@@ -29,10 +29,12 @@ func NewJSONOrderRepo(dir string) OrderRepository {
 
 func (r *jsonOrderRepo) loadOrders() ([]models.Order, error) {
 	path := filepath.Join(r.dataDir, "orders.json")
+
 	raw, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
+
 	var orders []models.Order
 	if err := json.Unmarshal(raw, &orders); err != nil {
 		return nil, err

@@ -69,7 +69,7 @@ func (h *InventoryHandler) InventoryByID(w http.ResponseWriter, r *http.Request)
 
 		if err := h.svc.UpdateInventoryItem(id, updatedItem); err != nil {
 			switch err.Error() {
-			case "Inventory item ID or name already exists":
+			case "Inventory item ID already exists", "Inventory item name already exists":
 				http.Error(w, err.Error(), http.StatusConflict)
 			default:
 				http.Error(w, err.Error(), http.StatusNotFound)

@@ -3,10 +3,12 @@ package repository
 import (
 	"encoding/json"
 	"fmt"
-	"hot-coffee/models"
 	"io/ioutil"
+	"log/slog"
 	"path/filepath"
 	"sync"
+
+	"hot-coffee/models"
 )
 
 type InventoryRepository interface {
@@ -30,6 +32,7 @@ func (r *jsonInventoryRepo) loadInventory() ([]models.InventoryItem, error) {
 	path := filepath.Join(r.dataDir, "inventory.json")
 	raw, err := ioutil.ReadFile(path)
 	if err != nil {
+		slog.Error("failed to read inventory file", "path", path, "err", err)
 		return nil, err
 	}
 	var inventory []models.InventoryItem
@@ -46,7 +49,7 @@ func (r *jsonInventoryRepo) saveInventory(inventory []models.InventoryItem) erro
 		return err
 	}
 	path := filepath.Join(r.dataDir, "inventory.json")
-	return ioutil.WriteFile(path, raw, 0644)
+	return ioutil.WriteFile(path, raw, 0o644)
 }
 
 func (r *jsonInventoryRepo) Add(item models.InventoryItem) error {

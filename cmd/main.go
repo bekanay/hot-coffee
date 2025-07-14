@@ -3,14 +3,20 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
+	"log/slog"
+	"net/http"
+	"os"
+
 	"hot-coffee/internal/handler"
 	"hot-coffee/internal/repository"
 	"hot-coffee/internal/service"
-	"log"
-	"net/http"
 )
 
 func main() {
+	jsonHandler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})
+	slog.SetDefault(slog.New(jsonHandler))
+
 	port := flag.String("port", ":4000", "HTTP network address")
 	dir := flag.String("dir", "data", "Path to the directory")
 	help := flag.Bool("help", false, "Print usage information")
@@ -25,7 +31,7 @@ func main() {
 		log.Fatal("You must specify a directory with -dir")
 	}
 
-	mux := http.NewServeMux()
+	slog.Info("Starting Hot-Coffee", "port", *port, "dataDir", *dir)
 
 	// Data Access Layer
 	// orderRepo := repository.NewJSONOrderRepo(*dir)
@@ -44,17 +50,18 @@ func main() {
 
 	// mux.HandleFunc("/orders", orderHandler.Orders)     // GET/POST /orders
 	// mux.HandleFunc("/orders/", orderHandler.OrderByID) // GET/PUT/DELETE /orders/{id}
-
+	mux := http.NewServeMux()
 	mux.HandleFunc("/menu", menuHandler.Menu)
 	mux.HandleFunc("/menu/", menuHandler.MenuByID)
 
 	mux.HandleFunc("/inventory", invHandler.Inventory)
 	mux.HandleFunc("/inventory/", invHandler.InventoryByID)
 
-	log.Printf("Listening on %s", *port)
+	slog.Info("Listening", "address", *port)
 	err := http.ListenAndServe(*port, mux)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("Server failed", err)
+		os.Exit(1)
 	}
 }
 

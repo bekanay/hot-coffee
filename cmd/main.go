@@ -11,8 +11,8 @@ import (
 )
 
 func main() {
-	port := flag.String("port", "4000", "HTTP network address")
-	dir := flag.String("dir", "data", "Path to the directory")
+	port := flag.String("port", ":4000", "HTTP network address")
+	dir := flag.String("dir", "../data", "Path to the directory")
 	help := flag.Bool("help", false, "Print usage information")
 	flag.Parse()
 
@@ -49,7 +49,7 @@ func main() {
 	// mux.HandleFunc("/menu_items/", menuHandler.MenuItemByID)
 
 	mux.HandleFunc("/inventory", invHandler.Inventory)
-	// mux.HandleFunc("/inventory/", invHandler.InventoryByID)
+	mux.HandleFunc("/inventory/", invHandler.InventoryByID)
 
 	log.Printf("Listening on %s", *port)
 	err := http.ListenAndServe(*port, mux)

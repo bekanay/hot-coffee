@@ -57,6 +57,15 @@ func (r *jsonMenuRepo) Add(menuItem models.MenuItem) error {
 	if err != nil {
 		return err
 	}
+	for _, item := range menuItems {
+		if item.ID == menuItem.ID {
+			return fmt.Errorf("Menu item ID already exists")
+		}
+		if item.Name == menuItem.Name {
+			return fmt.Errorf("Menu item name already exists")
+		}
+	}
+
 	menuItems = append(menuItems, menuItem)
 
 	return r.saveMenuItems(menuItems)
@@ -100,6 +109,12 @@ func (r *jsonMenuRepo) Update(id string, updated models.MenuItem) error {
 		if item.ID == id {
 			menuItems[i] = updated
 			return r.saveMenuItems(menuItems)
+		}
+		if item.ID == updated.ID {
+			return fmt.Errorf("Menu item ID already exists")
+		}
+		if item.Name == updated.Name {
+			return fmt.Errorf("Menu item name already exists")
 		}
 	}
 

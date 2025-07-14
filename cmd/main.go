@@ -29,24 +29,24 @@ func main() {
 
 	// Data Access Layer
 	// orderRepo := repository.NewJSONOrderRepo(*dir)
-	// menuRepo := repository.NewJSONMenuRepo(*dir)
+	menuRepo := repository.NewJSONMenuRepo(*dir)
 	invRepo := repository.NewJSONInventoryRepo(*dir)
 
 	// // Service layer
 	// orderSvc := service.NewOrderService(orderRepo)
-	// menuSvc := service.NewMenuService(menuRepo)
+	menuSvc := service.NewMenuService(menuRepo, invRepo)
 	invSvc := service.NewInventoryService(invRepo)
 
 	// // Handler layer
 	// orderHandler := handler.NewOrderHandler(orderSvc)
-	// menuHandler := handler.NewMenuHandler(menuSvc)
+	menuHandler := handler.NewMenuHandler(menuSvc)
 	invHandler := handler.NewInventoryHandler(invSvc)
 
 	// mux.HandleFunc("/orders", orderHandler.Orders)     // GET/POST /orders
 	// mux.HandleFunc("/orders/", orderHandler.OrderByID) // GET/PUT/DELETE /orders/{id}
 
-	// mux.HandleFunc("/menu_items", menuHandler.MenuItems)
-	// mux.HandleFunc("/menu_items/", menuHandler.MenuItemByID)
+	mux.HandleFunc("/menu", menuHandler.Menu)
+	mux.HandleFunc("/menu/", menuHandler.MenuByID)
 
 	mux.HandleFunc("/inventory", invHandler.Inventory)
 	mux.HandleFunc("/inventory/", invHandler.InventoryByID)

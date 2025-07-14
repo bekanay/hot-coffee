@@ -1,7 +1,7 @@
 [
   {
-    "product_id": "latte",
-    "name": "Caffe Latte",
+    "product_id": "lattee",
+    "name": "Caffe Lattee",
     "description": "Espresso with steamed milk",
     "price": 3.5,
     "ingredients": [
@@ -12,26 +12,6 @@
       {
         "ingredient_id": "milk",
         "quantity": 200
-      }
-    ]
-  },
-  {
-    "product_id": "cappuccino",
-    "name": "Cappuccino",
-    "description": "Espresso with steamed milk and milk foam",
-    "price": 3.75,
-    "ingredients": [
-      {
-        "ingredient_id": "espresso_shot",
-        "quantity": 1
-      },
-      {
-        "ingredient_id": "milk",
-        "quantity": 150
-      },
-      {
-        "ingredient_id": "milk_foam",
-        "quantity": 50
       }
     ]
   },

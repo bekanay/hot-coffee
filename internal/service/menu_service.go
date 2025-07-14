@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"hot-coffee/internal/repository"
 	"hot-coffee/models"
+	"log/slog"
 )
 
 type MenuService interface {
@@ -24,24 +25,34 @@ func NewMenuService(mr repository.MenuRepository, ir repository.InventoryReposit
 }
 
 func (s *menuServ) AddMenuItem(item models.MenuItem) error {
+	slog.Info("AddMenuItem called", "id", item.ID, "name", item.Name, "price", item.Price)
+
 	if item.Price <= 0 {
+		slog.Warn("AddMenuItem: non-positive price", "price", item.Price)
 		return fmt.Errorf("price must be non-negative")
 	}
 
 	for _, ingredient := range item.Ingredients {
 		if ingredient.Quantity < 0 {
+			slog.Warn("AddMenuItem: ingredient negative quantity", "ingredient", ingredient.IngredientID, "qty", ingredient.Quantity)
 			return fmt.Errorf("quantity must be non-negative value")
 		}
 	}
+
+	slog.Debug("AddMenuItem: loading existing menu items")
 	menuItems, _ := s.menuRepo.FindAll()
+
 	for _, exist := range menuItems {
 		if exist.ID == item.ID {
+			slog.Warn("AddMenuItem: duplicate ID", "id", item.ID)
 			return fmt.Errorf("Menu item ID already exists")
 		}
 		if exist.Name == item.Name {
+			slog.Warn("AddMenuItem: duplicate name", "name", item.Name)
 			return fmt.Errorf("Menu item name already exists")
 		}
 
+		slog.Debug("AddMenuItem: checking inventory for ingredients")
 		inventoryItems, _ := s.invRepo.FindAll()
 		var matchedIngredients []string
 		for _, invItem := range inventoryItems {
@@ -60,7 +71,7 @@ func (s *menuServ) AddMenuItem(item models.MenuItem) error {
 						found = true
 					}
 				}
-				if found == false {
+				if !found {
 					missingIngredients = append(missingIngredients, ingredient.IngredientID)
 				}
 			}
@@ -72,35 +83,67 @@ func (s *menuServ) AddMenuItem(item models.MenuItem) error {
 						list += ", "
 					}
 				}
+				slog.Warn("AddMenuItem: missing ingredients", "missing", missingIngredients)
 				return fmt.Errorf("following ingredients missing: %s", list)
 			}
 		}
 	}
 
-	return s.menuRepo.Add(item)
+	slog.Debug("AddMenuItem: saving new menu item to repo")
+	err := s.menuRepo.Add(item)
+	if err != nil {
+		slog.Error("AddMenuItem: repo.Add failed", "err", err)
+		return err
+	}
+	slog.Info("AddMenuItem: success", "id", item.ID)
+	return nil
 }
 
 func (s *menuServ) GetAllMenuItems() ([]models.MenuItem, error) {
-	return s.menuRepo.FindAll()
+	slog.Info("GetAllMenuItems called")
+	items, err := s.menuRepo.FindAll()
+	if err != nil {
+		slog.Error("GetAllMenuItems: repo.FindAll failed", "err", err)
+		return nil, err
+	}
+	slog.Info("GetAllMenuItems: returning items", "count", len(items))
+	return items, nil
 }
 
 func (s *menuServ) GetMenuItemByID(id string) (models.MenuItem, error) {
-	item, err := s.menuRepo.FindByID(id)
+	slog.Info("GetMenuItemByID called", "id", id)
+	ptr, err := s.menuRepo.FindByID(id)
 	if err != nil {
+		slog.Warn("GetMenuItemByID: not found", "id", id, "err", err)
 		return models.MenuItem{}, err
 	}
-
-	return *item, nil
+	slog.Info("GetMenuItemByID: found", "id", id)
+	return *ptr, nil
 }
 
 func (s *menuServ) UpdateMenuItem(id string, updatedItem models.MenuItem) error {
+	slog.Info("UpdateMenuItem called", "id", id)
 	if updatedItem.Price <= 0 {
+		slog.Warn("UpdateMenuItem: non-positive price", "price", updatedItem.Price)
 		return fmt.Errorf("price must be non-negative")
 	}
-
-	return s.menuRepo.Update(id, updatedItem)
+	slog.Debug("UpdateMenuItem: passing update to repo", "id", id)
+	err := s.menuRepo.Update(id, updatedItem)
+	if err != nil {
+		slog.Error("UpdateMenuItem: repo.Update failed", "id", id, "err", err)
+		return err
+	}
+	slog.Info("UpdateMenuItem: success", "id", id)
+	return nil
 }
 
 func (s *menuServ) DeleteMenuItem(id string) error {
-	return s.menuRepo.Delete(id)
+	slog.Info("DeleteMenuItem called", "id", id)
+	err := s.menuRepo.Delete(id)
+	if err != nil {
+		slog.Warn("DeleteMenuItem: repo.Delete failed", "id", id, "err", err)
+		return err
+	}
+	slog.Info("DeleteMenuItem: success", "id", id)
+	return nil
 }

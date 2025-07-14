@@ -18,14 +18,14 @@
     "unit": "ml"
   },
   {
-    "ingredient_id": "flour",
-    "name": "Flour",
-    "quantity": 5000,
+    "ingredient_id": "butter",
+    "name": "Butter",
+    "quantity": 2000,
     "unit": "g"
   },
   {
-    "ingredient_id": "butter",
-    "name": "Butter",
+    "ingredient_id": "adfasdf",
+    "name": "hello",
     "quantity": 2000,
     "unit": "g"
   }

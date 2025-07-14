@@ -12,7 +12,7 @@ import (
 
 func main() {
 	port := flag.String("port", ":4000", "HTTP network address")
-	dir := flag.String("dir", "../data", "Path to the directory")
+	dir := flag.String("dir", "data", "Path to the directory")
 	help := flag.Bool("help", false, "Print usage information")
 	flag.Parse()
 

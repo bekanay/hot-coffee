@@ -57,6 +57,14 @@ func (r *jsonInventoryRepo) Add(item models.InventoryItem) error {
 	if err != nil {
 		return err
 	}
+	for i := range inventory {
+		if inventory[i].IngredientID == item.IngredientID {
+			return fmt.Errorf("Item ID already exists")
+		}
+		if inventory[i].Name == item.Name {
+			return fmt.Errorf("Item Name already exists")
+		}
+	}
 	inventory = append(inventory, item)
 
 	return r.saveInventory(inventory)
@@ -97,6 +105,9 @@ func (r *jsonInventoryRepo) Update(id string, updated models.InventoryItem) erro
 	}
 
 	for i, item := range inventory {
+		if item.IngredientID == updated.IngredientID || item.Name == updated.Name {
+			return fmt.Errorf("Inventory item ID or name already exists")
+		}
 		if item.IngredientID == id {
 			inventory[i] = updated
 			return r.saveInventory(inventory)

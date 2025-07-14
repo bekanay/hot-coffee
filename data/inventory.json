@@ -6,12 +6,6 @@
     "unit": "shots"
   },
   {
-    "ingredient_id": "milk",
-    "name": "Milk",
-    "quantity": 10000,
-    "unit": "ml"
-  },
-  {
     "ingredient_id": "milk_foam",
     "name": "Milk Foam",
     "quantity": 5000,

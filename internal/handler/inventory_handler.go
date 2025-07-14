@@ -33,7 +33,12 @@ func (h *InventoryHandler) Inventory(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if err := h.svc.AddInventoryItem(item); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			switch err.Error() {
+			case "Item ID already exists", "Item Name already exists":
+				http.Error(w, err.Error(), http.StatusConflict)
+			default:
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
 			return
 		}
 		w.WriteHeader(http.StatusCreated)
@@ -63,7 +68,12 @@ func (h *InventoryHandler) InventoryByID(w http.ResponseWriter, r *http.Request)
 		}
 
 		if err := h.svc.UpdateInventoryItem(id, updatedItem); err != nil {
-			http.Error(w, err.Error(), http.StatusNotFound)
+			switch err.Error() {
+			case "Inventory item ID or name already exists":
+				http.Error(w, err.Error(), http.StatusConflict)
+			default:
+				http.Error(w, err.Error(), http.StatusNotFound)
+			}
 			return
 		}
 

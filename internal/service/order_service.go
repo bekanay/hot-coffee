@@ -28,26 +28,9 @@ func NewOrderService(or repository.OrderRepository, mr repository.MenuRepository
 }
 
 func (s *OrderServ) CreateOrder(order models.Order) error {
-	invItems, err := s.invRepo.FindAll()
+	err := checkForIngredients(s, order)
 	if err != nil {
 		return err
-	}
-
-	for _, menuItem := range order.Items {
-		item, err := s.menuRepo.FindByID(menuItem.ProductID)
-		if err != nil {
-			return err
-		}
-		for _, ingredient := range item.Ingredients {
-			for _, invItem := range invItems {
-				if invItem.IngredientID == ingredient.IngredientID {
-					if ingredient.Quantity*float64(menuItem.Quantity) > invItem.Quantity {
-						return fmt.Errorf("not enough ingredient %s", ingredient.IngredientID)
-					}
-					invItem.Quantity -= ingredient.Quantity * float64(menuItem.Quantity)
-				}
-			}
-		}
 	}
 	err = s.orderRepo.Add(order)
 	if err != nil {
@@ -75,12 +58,61 @@ func (s *OrderServ) GetOrderById(id string) (models.Order, error) {
 	return *order, nil
 }
 
-func (s *OrderServ) UpdateOrder(id string, order models.Order) error {
-	err := s.orderRepo.Update(id, order)
+func (s *OrderServ) UpdateOrder(id string, updatedOrder models.Order) error {
+	order, err := s.orderRepo.FindByID(id)
 	if err != nil {
 		return err
 	}
 
+	var missingMenuItems []models.OrderItem
+
+	for _, menuItem := range order.Items {
+		exists := false
+		for _, menuUpdatedItem := range updatedOrder.Items {
+			if menuItem.ProductID == menuUpdatedItem.ProductID {
+				exists = true
+			}
+		}
+		if !exists {
+			missingMenuItems = append(missingMenuItems, menuItem)
+		}
+	}
+
+	err = checkForIngredients(s, updatedOrder)
+	if err != nil {
+		return err
+	}
+
+	err = s.orderRepo.Update(id, updatedOrder)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func checkForIngredients(s *OrderServ, order models.Order) error {
+	invItems, err := s.invRepo.FindAll()
+	if err != nil {
+		return err
+	}
+
+	for _, menuItem := range order.Items {
+		item, err := s.menuRepo.FindByID(menuItem.ProductID)
+		if err != nil {
+			return err
+		}
+		for _, ingredient := range item.Ingredients {
+			for _, invItem := range invItems {
+				if invItem.IngredientID == ingredient.IngredientID {
+					if ingredient.Quantity*float64(menuItem.Quantity) > invItem.Quantity {
+						return fmt.Errorf("not enough ingredient %s", ingredient.IngredientID)
+					}
+					invItem.Quantity -= ingredient.Quantity * float64(menuItem.Quantity)
+				}
+			}
+		}
+	}
 	return nil
 }
 

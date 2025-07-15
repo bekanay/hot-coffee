@@ -28,22 +28,28 @@ func NewOrderService(or repository.OrderRepository, mr repository.MenuRepository
 }
 
 func (s *OrderServ) CreateOrder(order models.Order) error {
+	invItems, err := s.invRepo.FindAll()
+	if err != nil {
+		return err
+	}
+
 	for _, menuItem := range order.Items {
 		item, err := s.menuRepo.FindByID(menuItem.ProductID)
 		if err != nil {
 			return err
 		}
 		for _, ingredient := range item.Ingredients {
-			invItem, err := s.invRepo.FindByID(ingredient.IngredientID)
-			if err != nil {
-				return err
-			}
-			if ingredient.Quantity*float64(menuItem.Quantity) > invItem.Quantity {
-				return fmt.Errorf("not enough ingredient %s", ingredient.IngredientID)
+			for _, invItem := range invItems {
+				if invItem.IngredientID == ingredient.IngredientID {
+					if ingredient.Quantity*float64(menuItem.Quantity) > invItem.Quantity {
+						return fmt.Errorf("not enough ingredient %s", ingredient.IngredientID)
+					}
+					invItem.Quantity -= ingredient.Quantity * float64(menuItem.Quantity)
+				}
 			}
 		}
 	}
-	err := s.orderRepo.Add(order)
+	err = s.orderRepo.Add(order)
 	if err != nil {
 		return err
 	}

@@ -6,20 +6,100 @@ import (
 )
 
 type OrderService interface {
-	CreateOrder(order models.Order) (models.Order, error)
+	CreateOrder(order models.Order) error
 	GetOrders() ([]models.Order, error)
 	GetOrderById(id string) (models.Order, error)
 	UpdateOrder(id string, order models.Order) error
 	DeleteOrder(id string) error
 	CloseOrder(id string) error
-	GetTotalSales() (float64, error)
+	GetTotalSales() (models.Total, error)
 	GetPopularMenuItems() ([]models.MenuItem, error)
 }
 
 type OrderServ struct {
-	repo repository.OrderRepository
+	orderRepo repository.OrderRepository
+	menuRepo  repository.MenuRepository
 }
 
-func NewOrderService(r repository.OrderRepository) *OrderServ {
-	return &OrderServ{repo: r}
+func NewOrderService(or repository.OrderRepository, mr repository.MenuRepository) *OrderServ {
+	return &OrderServ{orderRepo: or, menuRepo: mr}
+}
+
+func (s *OrderServ) CreateOrder(order models.Order) error {
+	err := s.orderRepo.Add(order)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *OrderServ) GetOrders() ([]models.Order, error) {
+	orders, err := s.orderRepo.FindAll()
+	if err != nil {
+		return nil, err
+	}
+
+	return orders, nil
+}
+
+func (s *OrderServ) GetOrderById(id string) (models.Order, error) {
+	order, err := s.orderRepo.FindByID(id)
+	if err != nil {
+		return models.Order{}, err
+	}
+
+	return *order, nil
+}
+
+func (s *OrderServ) UpdateOrder(id string, order models.Order) error {
+	err := s.orderRepo.Update(id, order)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *OrderServ) DeleteOrder(id string) error {
+	err := s.orderRepo.Delete(id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *OrderServ) CloseOrder(id string) error {
+	err := s.orderRepo.Close(id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *OrderServ) GetTotalSales() (models.Total, error) {
+	orders, err := s.orderRepo.FindAll()
+	if err != nil {
+		return models.Total{}, err
+	}
+
+	totalSales := 0.0
+	for _, order := range orders {
+		for _, menuItem := range order.Items {
+			if order.Status == "closed" {
+				item, err := s.menuRepo.FindByID(menuItem.ProductID)
+				if err != nil {
+					return models.Total{}, err
+				}
+				totalSales += item.Price * float64(menuItem.Quantity)
+			}
+		}
+	}
+	return models.Total{TotalSales: totalSales}, nil
+}
+
+func (s *OrderServ) GetPopularMenuItems() ([]models.MenuItem, error) {
+	return []models.MenuItem{}, nil
 }

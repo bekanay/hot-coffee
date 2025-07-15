@@ -3,14 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
+	"hot-coffee/internal/handler"
+	"hot-coffee/internal/repository"
+	"hot-coffee/internal/service"
 	"log"
 	"log/slog"
 	"net/http"
 	"os"
-
-	"hot-coffee/internal/handler"
-	"hot-coffee/internal/repository"
-	"hot-coffee/internal/service"
 )
 
 func main() {
@@ -34,28 +33,33 @@ func main() {
 	slog.Info("Starting Hot-Coffee", "port", *port, "dataDir", *dir)
 
 	// Data Access Layer
-	// orderRepo := repository.NewJSONOrderRepo(*dir)
+	orderRepo := repository.NewJSONOrderRepo(*dir)
 	menuRepo := repository.NewJSONMenuRepo(*dir)
 	invRepo := repository.NewJSONInventoryRepo(*dir)
 
 	// // Service layer
-	// orderSvc := service.NewOrderService(orderRepo)
+	orderSvc := service.NewOrderService(orderRepo, menuRepo)
 	menuSvc := service.NewMenuService(menuRepo, invRepo)
 	invSvc := service.NewInventoryService(invRepo)
 
 	// // Handler layer
-	// orderHandler := handler.NewOrderHandler(orderSvc)
+	orderHandler := handler.NewOrderHandler(orderSvc)
 	menuHandler := handler.NewMenuHandler(menuSvc)
 	invHandler := handler.NewInventoryHandler(invSvc)
 
-	// mux.HandleFunc("/orders", orderHandler.Orders)     // GET/POST /orders
-	// mux.HandleFunc("/orders/", orderHandler.OrderByID) // GET/PUT/DELETE /orders/{id}
 	mux := http.NewServeMux()
+
+	mux.HandleFunc("/orders", orderHandler.Orders)     // GET/POST /orders
+	mux.HandleFunc("/orders/", orderHandler.OrderByID) // GET/PUT/DELETE /orders/{id}
+
 	mux.HandleFunc("/menu", menuHandler.Menu)
 	mux.HandleFunc("/menu/", menuHandler.MenuByID)
 
 	mux.HandleFunc("/inventory", invHandler.Inventory)
 	mux.HandleFunc("/inventory/", invHandler.InventoryByID)
+
+	mux.HandleFunc("/reports/total-sales", orderHandler.GetTotalSales)
+	mux.HandleFunc("/reports/popular-items", orderHandler.GetPopularMenuItems)
 
 	slog.Info("Listening", "address", *port)
 	err := http.ListenAndServe(*port, mux)

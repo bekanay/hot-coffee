@@ -38,7 +38,7 @@ func main() {
 	invRepo := repository.NewJSONInventoryRepo(*dir)
 
 	// // Service layer
-	orderSvc := service.NewOrderService(orderRepo, menuRepo)
+	orderSvc := service.NewOrderService(orderRepo, menuRepo, invRepo)
 	menuSvc := service.NewMenuService(menuRepo, invRepo)
 	invSvc := service.NewInventoryService(invRepo)
 

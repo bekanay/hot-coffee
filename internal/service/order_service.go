@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"hot-coffee/internal/repository"
 	"hot-coffee/models"
 )
@@ -19,13 +20,29 @@ type OrderService interface {
 type OrderServ struct {
 	orderRepo repository.OrderRepository
 	menuRepo  repository.MenuRepository
+	invRepo   repository.InventoryRepository
 }
 
-func NewOrderService(or repository.OrderRepository, mr repository.MenuRepository) *OrderServ {
-	return &OrderServ{orderRepo: or, menuRepo: mr}
+func NewOrderService(or repository.OrderRepository, mr repository.MenuRepository, ir repository.InventoryRepository) *OrderServ {
+	return &OrderServ{orderRepo: or, menuRepo: mr, invRepo: ir}
 }
 
 func (s *OrderServ) CreateOrder(order models.Order) error {
+	for _, menuItem := range order.Items {
+		item, err := s.menuRepo.FindByID(menuItem.ProductID)
+		if err != nil {
+			return err
+		}
+		for _, ingredient := range item.Ingredients {
+			invItem, err := s.invRepo.FindByID(ingredient.IngredientID)
+			if err != nil {
+				return err
+			}
+			if ingredient.Quantity*float64(menuItem.Quantity) > invItem.Quantity {
+				return fmt.Errorf("not enough ingredient %s", ingredient.IngredientID)
+			}
+		}
+	}
 	err := s.orderRepo.Add(order)
 	if err != nil {
 		return err

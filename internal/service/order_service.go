@@ -5,6 +5,8 @@ import (
 	"hot-coffee/internal/repository"
 	"hot-coffee/models"
 	"strconv"
+	"strings"
+	"unicode"
 )
 
 type OrderService interface {
@@ -29,6 +31,11 @@ func NewOrderService(or repository.OrderRepository, mr repository.MenuRepository
 }
 
 func (s *OrderServ) CreateOrder(order models.Order) error {
+	for _, product := range order.Items {
+		if product.Quantity <= 0 {
+			return fmt.Errorf("invalid quantity %d for product: %s", product.Quantity, product.ProductID)
+		}
+	}
 	_, err := s.orderRepo.FindByID(order.ID)
 	if err == nil {
 		return models.ErrAlreadyExists
@@ -107,21 +114,40 @@ func checkForIngredients(s *OrderServ, order models.Order) error {
 
 	var reducedItems []models.InventoryItem
 	noIngredient := false
-	missingIngredients := make(map[string]string)
+	requiredIngredients := make(map[string]string)
+
 	for _, menuItem := range order.Items {
+		if menuItem.Quantity < 0 {
+			return fmt.Errorf("menu item %s has negative value", menuItem.ProductID)
+		}
 		item, err := s.menuRepo.FindByID(menuItem.ProductID)
 		if err != nil {
 			return err
 		}
 
 		for _, ingredient := range item.Ingredients {
+			if ingredient.Quantity < 0 {
+				return fmt.Errorf("ingredient %s has negative value", ingredient.IngredientID)
+			}
 			ingredientFound := false
 			for i, invItem := range invItems {
 				if invItems[i].IngredientID == ingredient.IngredientID {
 					ingredientFound = true
+					_, ok := requiredIngredients[ingredient.IngredientID]
+					if ok {
+						requiredIngredients[ingredient.IngredientID] = strings.Trim(requiredIngredients[ingredient.IngredientID], invItems[i].Unit)
+						temp, err := strconv.Atoi(requiredIngredients[ingredient.IngredientID])
+						if err != nil {
+							return err
+						}
+						temp += int(ingredient.Quantity) * menuItem.Quantity
+						requiredIngredients[ingredient.IngredientID] = strconv.Itoa(temp) + invItems[i].Unit
+						temp = 0
+					} else {
+						requiredIngredients[ingredient.IngredientID] = strconv.Itoa(int(ingredient.Quantity)*menuItem.Quantity) + invItems[i].Unit
+					}
 					if ingredient.Quantity*float64(menuItem.Quantity) > invItems[i].Quantity {
 						noIngredient = true
-						missingIngredients[ingredient.IngredientID] = strconv.Itoa(int(ingredient.Quantity)) + invItems[i].Unit
 					} else {
 						reducedQuantity := ingredient.Quantity * float64(menuItem.Quantity)
 						invItems[i].Quantity -= reducedQuantity
@@ -137,18 +163,35 @@ func checkForIngredients(s *OrderServ, order models.Order) error {
 			}
 		}
 	}
+
 	if noIngredient {
-		returnItems(s, reducedItems)
+		if err := returnItems(s, reducedItems); err != nil {
+			return err
+		}
+
 		list := ""
-		for key, val := range missingIngredients {
+		for key, val := range requiredIngredients {
+			number := strings.TrimRightFunc(val, unicode.IsLetter)
+
+			req, err := strconv.Atoi(number)
+			if err != nil {
+				return err
+			}
+
 			ingredient, err := s.invRepo.FindByID(key)
 			if err != nil {
 				return err
 			}
-			list += key + ". Required: " + val + " , Available: " + strconv.Itoa(int(ingredient.Quantity)) + ingredient.Unit + "."
+
+			avail := int(ingredient.Quantity)
+			if avail < req {
+				list += key + ". Required: " + val + " , Available: " + strconv.Itoa(int(ingredient.Quantity)) + ingredient.Unit + "."
+			}
 		}
-		return fmt.Errorf("Insufficient inventory for ingredient " + list)
+
+		return fmt.Errorf("Insufficient inventory for ingredient: " + list)
 	}
+
 	return nil
 }
 
@@ -210,5 +253,15 @@ func (s *OrderServ) GetTotalSales() (models.Total, error) {
 }
 
 func (s *OrderServ) GetPopularMenuItems() ([]models.MenuItem, error) {
+	// orders, err := s.orderRepo.FindAll()
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// counter := 0
+	// orderMap := make(map[string]int)
+	// for _, order := range orders {
+	// 	if order.ID
+	// }
 	return []models.MenuItem{}, nil
 }

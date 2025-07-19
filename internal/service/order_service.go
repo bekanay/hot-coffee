@@ -193,7 +193,6 @@ func countRequired(s *OrderServ, order models.Order) (map[string]float64, error)
 		for _, ingredient := range item.Ingredients {
 			if ingredient.Quantity < 0 {
 				requiredIngredients[ingredient.IngredientID] = -1
-				// return nil, fmt.Errorf("ingredient %s has negative value", ingredient.IngredientID)
 			}
 			if _, err := s.invRepo.FindByID(ingredient.IngredientID); err == nil {
 				if _, ok := requiredIngredients[ingredient.IngredientID]; ok {
@@ -203,7 +202,6 @@ func countRequired(s *OrderServ, order models.Order) (map[string]float64, error)
 				}
 			} else {
 				requiredIngredients[ingredient.IngredientID] = -2
-				// return nil, fmt.Errorf("ingredient %s not found", ingredient.IngredientID)
 			}
 		}
 	}

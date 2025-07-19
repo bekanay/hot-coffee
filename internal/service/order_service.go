@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"hot-coffee/internal/repository"
 	"hot-coffee/models"
+	"sort"
 	"strconv"
 	"time"
 )
@@ -16,7 +17,7 @@ type OrderService interface {
 	DeleteOrder(id string) error
 	CloseOrder(id string) error
 	GetTotalSales() (models.Total, error)
-	GetPopularMenuItems() ([]models.MenuItem, error)
+	GetPopularMenuItems() ([]string, error)
 }
 
 type OrderServ struct {
@@ -104,49 +105,67 @@ func (s *OrderServ) UpdateOrder(id string, updatedOrder models.Order) ([]string,
 		}
 	}
 
-	// order, err := s.orderRepo.FindByID(id)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	requiredIngredients, err := countRequired(s, updatedOrder)
+	order, err := s.orderRepo.FindByID(id)
 	if err != nil {
 		return nil, err
 	}
 
-	conflicts, err := compareIngredients(s, updatedOrder, requiredIngredients)
+	requiredIngredientsPrev, err := countRequired(s, *order)
 	if err != nil {
+		return nil, err
+	}
+
+	err = returnItems(s, requiredIngredientsPrev)
+	if err != nil {
+		return nil, err
+	}
+
+	requiredIngredientsNew, err := countRequired(s, updatedOrder)
+	if err != nil {
+		return nil, err
+	}
+
+	conflicts, err := compareIngredients(s, updatedOrder, requiredIngredientsNew)
+	if err != nil {
+		err := orderResult(s, requiredIngredientsPrev)
+		if err != nil {
+			return conflicts, err
+		}
 		return conflicts, err
 	}
 
 	if len(conflicts) != 0 {
+		err := orderResult(s, requiredIngredientsPrev)
+		if err != nil {
+			return conflicts, err
+		}
 		return conflicts, nil
 	} else {
-		err := orderResult(s, requiredIngredients)
+		err := orderResult(s, requiredIngredientsNew)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	// var missingMenuItems []models.OrderItem
+	if updatedOrder.ID == "" {
+		updatedOrder.ID = id
+	}
 
-	// for _, menuItem := range order.Items {
-	// 	exists := false
-	// 	for _, menuUpdatedItem := range updatedOrder.Items {
-	// 		if menuItem.ProductID == menuUpdatedItem.ProductID {
-	// 			exists = true
-	// 		}
-	// 	}
+	if updatedOrder.CustomerName == "" {
+		updatedOrder.CustomerName = order.CustomerName
+	}
 
-	// 	if !exists {
-	// 		missingMenuItems = append(missingMenuItems, menuItem)
-	// 	}
-	// }
+	if updatedOrder.CreatedAt == "" {
+		updatedOrder.CreatedAt = time.Now().UTC().Format(time.RFC3339)
+	}
 
-	// err = checkForIngredients(s, updatedOrder)
-	// if err != nil {
-	// 	return err
-	// }
+	if updatedOrder.Status == "" {
+		updatedOrder.Status = order.Status
+	}
+
+	if len(updatedOrder.Items) == 0 {
+		return nil, fmt.Errorf("items cannot be empty")
+	}
 
 	err = s.orderRepo.Update(id, updatedOrder)
 	if err != nil {
@@ -154,6 +173,25 @@ func (s *OrderServ) UpdateOrder(id string, updatedOrder models.Order) ([]string,
 	}
 
 	return nil, nil
+}
+
+func returnItems(s *OrderServ, requiredIngredients map[string]float64) error {
+	invItems, err := s.invRepo.FindAll()
+	if err != nil {
+		return err
+	}
+	for key, val := range requiredIngredients {
+		for i := range invItems {
+			if invItems[i].IngredientID == key {
+				invItems[i].Quantity += val
+				if err := s.invRepo.Update(key, invItems[i]); err != nil {
+					return nil
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 func validateOrder(s *OrderServ, order models.Order) ([]string, error) {
@@ -295,16 +333,43 @@ func (s *OrderServ) GetTotalSales() (models.Total, error) {
 	return models.Total{TotalSales: totalSales}, nil
 }
 
-func (s *OrderServ) GetPopularMenuItems() ([]models.MenuItem, error) {
-	// orders, err := s.orderRepo.FindAll()
-	// if err != nil {
-	// 	return nil, err
-	// }
+func (s *OrderServ) GetPopularMenuItems() ([]string, error) {
+	var popularMenuItems []string
 
-	// counter := 0
-	// orderMap := make(map[string]int)
-	// for _, order := range orders {
-	// 	if order.ID
-	// }
-	return []models.MenuItem{}, nil
+	orders, err := s.orderRepo.FindAll()
+	if err != nil {
+		return nil, err
+	}
+
+	menuItems := make(map[string]int)
+	for _, order := range orders {
+		if order.Status == "closed" {
+			for _, menuItem := range order.Items {
+				if _, ok := menuItems[menuItem.ProductID]; ok {
+					menuItems[menuItem.ProductID] += menuItem.Quantity
+				} else {
+					menuItems[menuItem.ProductID] = menuItem.Quantity
+				}
+			}
+		}
+	}
+
+	keys := make([]string, 0, len(menuItems))
+	for k := range menuItems {
+		keys = append(keys, k)
+	}
+
+	sort.Slice(keys, func(i, j int) bool {
+		return menuItems[keys[i]] > menuItems[keys[j]]
+	})
+
+	if len(keys) < 3 {
+		return nil, fmt.Errorf("not enough menu items to achieve result")
+	}
+
+	for i := 0; i < 3; i++ {
+		row := keys[i] + ": " + strconv.Itoa(menuItems[keys[i]])
+		popularMenuItems = append(popularMenuItems, row)
+	}
+	return popularMenuItems, nil
 }

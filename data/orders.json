@@ -16,80 +16,36 @@
     "created_at": "2023-10-01T09:00:00Z"
   },
   {
-    "order_id": "orderr",
-    "customer_name": "Alice Smith",
-    "items": [
-      {
-        "product_id": "cappuccino",
-        "quantity": 1
-      }
-    ],
-    "status": "open",
-    "created_at": "2023-10-01T09:00:00Z"
-  },
-  {
-    "order_id": "orderrr",
-    "customer_name": "Alice Smith",
-    "items": [
-      {
-        "product_id": "espresso",
-        "quantity": 1
-      }
-    ],
-    "status": "open",
-    "created_at": "2023-10-01T09:00:00Z"
-  },
-  {
-    "order_id": "orderrrr",
-    "customer_name": "Alice Smith",
-    "items": [
-      {
-        "product_id": "espresso",
-        "quantity": -1
-      }
-    ],
-    "status": "open",
-    "created_at": "2023-10-01T09:00:00Z"
-  },
-  {
-    "order_id": "test",
-    "customer_name": "Beka",
-    "items": [
-      {
-        "product_id": "latte",
-        "quantity": 2
-      }
-    ],
-    "status": "open",
-    "created_at": "2023-10-01T09:00:00Z"
-  },
-  {
     "order_id": "o100",
     "customer_name": "Alice",
     "items": [
       {
         "product_id": "espresso",
-        "quantity": 1
+        "quantity": 20
       },
       {
         "product_id": "americano",
-        "quantity": 2
+        "quantity": 5
       }
     ],
-    "status": "",
-    "created_at": ""
+    "status": "closed",
+    "created_at": "2025-07-19T16:18:07Z"
   },
   {
-    "order_id": "no_name",
-    "customer_name": "",
+    "order_id": "o10000",
+    "customer_name": "Alice",
     "items": [
       {
         "product_id": "espresso",
-        "quantity": 1
+        "quantity": 20
+      },
+      {
+        "product_id": "americano",
+        "quantity": 5
       }
     ],
-    "status": "",
-    "created_at": ""
+    "status": "closed",
+    "created_at": "2025-07-19T16:18:07Z"
   },
   {
     "order_id": "o1000",
@@ -97,33 +53,50 @@
     "items": [
       {
         "product_id": "espresso",
-        "quantity": 1
+        "quantity": 20
       },
       {
         "product_id": "americano",
-        "quantity": 2
+        "quantity": 5
       }
     ],
-    "status": "open",
-    "created_at": "2025-07-19T14:54:05Z"
+    "status": "closed",
+    "created_at": "2025-07-19T16:18:07Z"
   },
   {
-    "order_id": "empty_items",
-    "customer_name": "Dave",
-    "items": [],
-    "status": "open",
-    "created_at": "2025-07-19T14:54:56Z"
-  },
-  {
-    "order_id": "short_butter",
-    "customer_name": "Hank",
+    "order_id": "o100",
+    "customer_name": "Alice",
     "items": [
       {
-        "product_id": "croissant",
+        "product_id": "espresso",
+        "quantity": 20
+      },
+      {
+        "product_id": "americano",
+        "quantity": 5
+      },
+      {
+        "product_id": "latte",
+        "quantity": 10
+      }
+    ],
+    "status": "closed",
+    "created_at": "2025-07-19T16:18:07Z"
+  },
+  {
+    "order_id": "TEST001",
+    "customer_name": "Alice",
+    "items": [
+      {
+        "product_id": "latte",
+        "quantity": 2
+      },
+      {
+        "product_id": "americano",
         "quantity": 1
       }
     ],
     "status": "open",
-    "created_at": "2025-07-19T14:57:20Z"
+    "created_at": "2025-07-19T17:03:37Z"
   }
 ]

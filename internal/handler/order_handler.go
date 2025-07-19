@@ -89,8 +89,17 @@ func (h *OrderHandler) OrderByID(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
+
 			conflicts, err := h.svc.UpdateOrder(parts[2], order)
 			if err != nil {
+				if strings.Contains(err.Error(), "not found") {
+					http.Error(w, err.Error(), http.StatusNotFound)
+					return
+				}
+				if err.Error() == "items cannot be empty" {
+					http.Error(w, err.Error(), http.StatusBadRequest)
+					return
+				}
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -106,6 +115,10 @@ func (h *OrderHandler) OrderByID(w http.ResponseWriter, r *http.Request) {
 		case http.MethodDelete:
 			err := h.svc.DeleteOrder(parts[2])
 			if err != nil {
+				if strings.Contains(err.Error(), "not found") {
+					http.Error(w, err.Error(), http.StatusNotFound)
+					return
+				}
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -140,4 +153,11 @@ func (h *OrderHandler) GetPopularMenuItems(w http.ResponseWriter, r *http.Reques
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
 	}
+	popularMenuItems, err := h.svc.GetPopularMenuItems()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(popularMenuItems)
 }

@@ -2,31 +2,31 @@
   {
     "ingredient_id": "espresso_shot",
     "name": "Espresso Shot",
-    "quantity": 487,
+    "quantity": 498,
     "unit": "shots"
   },
   {
     "ingredient_id": "milk_foam",
     "name": "Milk Foam",
-    "quantity": 4950,
+    "quantity": 5000,
     "unit": "ml"
   },
   {
     "ingredient_id": "hot_water",
     "name": "Hot Water",
-    "quantity": 19400,
+    "quantity": 20600,
     "unit": "ml"
   },
   {
     "ingredient_id": "flour",
     "name": "Flour",
-    "quantity": 4900,
+    "quantity": 5000,
     "unit": "g"
   },
   {
     "ingredient_id": "milk",
     "name": "Milk",
-    "quantity": 800,
+    "quantity": 600,
     "unit": "g"
   },
   {

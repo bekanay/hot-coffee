@@ -15,4 +15,4 @@ type OrderItem struct {
 	Quantity  int    `json:"quantity"`
 }
 
-var ErrAlreadyExists = errors.New("dwadaw")
+var ErrAlreadyExists = errors.New("order id already exists")

@@ -2,7 +2,7 @@
   {
     "ingredient_id": "espresso_shot",
     "name": "Espresso Shot",
-    "quantity": 1,
+    "quantity": 487,
     "unit": "shots"
   },
   {
@@ -14,19 +14,25 @@
   {
     "ingredient_id": "hot_water",
     "name": "Hot Water",
-    "quantity": 20000,
+    "quantity": 19400,
     "unit": "ml"
   },
   {
     "ingredient_id": "flour",
     "name": "Flour",
-    "quantity": 5000,
+    "quantity": 4900,
+    "unit": "g"
+  },
+  {
+    "ingredient_id": "milk",
+    "name": "Milk",
+    "quantity": 800,
     "unit": "g"
   },
   {
     "ingredient_id": "butter",
     "name": "Butter",
-    "quantity": 2000,
+    "quantity": 0,
     "unit": "g"
   }
 ]

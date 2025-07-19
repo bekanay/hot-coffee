@@ -5,15 +5,14 @@ import (
 	"hot-coffee/internal/repository"
 	"hot-coffee/models"
 	"strconv"
-	"strings"
-	"unicode"
+	"time"
 )
 
 type OrderService interface {
-	CreateOrder(order models.Order) error
+	CreateOrder(order models.Order) ([]string, error)
 	GetOrders() ([]models.Order, error)
 	GetOrderById(id string) (models.Order, error)
-	UpdateOrder(id string, order models.Order) error
+	UpdateOrder(id string, order models.Order) ([]string, error)
 	DeleteOrder(id string) error
 	CloseOrder(id string) error
 	GetTotalSales() (models.Total, error)
@@ -30,28 +29,54 @@ func NewOrderService(or repository.OrderRepository, mr repository.MenuRepository
 	return &OrderServ{orderRepo: or, menuRepo: mr, invRepo: ir}
 }
 
-func (s *OrderServ) CreateOrder(order models.Order) error {
+func (s *OrderServ) CreateOrder(order models.Order) ([]string, error) {
+	validateConflicts, err := validateOrder(s, order)
+	if err != nil {
+		return validateConflicts, err
+	}
+
+	if len(validateConflicts) != 0 {
+		return validateConflicts, nil
+	}
+
 	for _, product := range order.Items {
 		if product.Quantity <= 0 {
-			return fmt.Errorf("invalid quantity %d for product: %s", product.Quantity, product.ProductID)
+			return nil, fmt.Errorf("invalid quantity %d for product: %s", product.Quantity, product.ProductID)
 		}
 	}
-	_, err := s.orderRepo.FindByID(order.ID)
-	if err == nil {
-		return models.ErrAlreadyExists
-	}
 
-	err = checkForIngredients(s, order)
+	requiredIngredients, err := countRequired(s, order)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
+	conflicts, err := compareIngredients(s, order, requiredIngredients)
+	if err != nil {
+		return conflicts, err
+	}
+
+	if len(conflicts) != 0 {
+		return conflicts, nil
+	} else {
+		err := orderResult(s, requiredIngredients)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if order.Status == "" {
+		order.Status = "open"
+	}
+
+	if order.CreatedAt == "" {
+		order.CreatedAt = time.Now().UTC().Format(time.RFC3339)
+	}
 	err = s.orderRepo.Add(order)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return nil, nil
 }
 
 func (s *OrderServ) GetOrders() ([]models.Order, error) {
@@ -72,140 +97,160 @@ func (s *OrderServ) GetOrderById(id string) (models.Order, error) {
 	return *order, nil
 }
 
-func (s *OrderServ) UpdateOrder(id string, updatedOrder models.Order) error {
-	order, err := s.orderRepo.FindByID(id)
-	if err != nil {
-		return err
-	}
-
-	var missingMenuItems []models.OrderItem
-
-	for _, menuItem := range order.Items {
-		exists := false
-		for _, menuUpdatedItem := range updatedOrder.Items {
-			if menuItem.ProductID == menuUpdatedItem.ProductID {
-				exists = true
-			}
-		}
-
-		if !exists {
-			missingMenuItems = append(missingMenuItems, menuItem)
+func (s *OrderServ) UpdateOrder(id string, updatedOrder models.Order) ([]string, error) {
+	for _, product := range updatedOrder.Items {
+		if product.Quantity <= 0 {
+			return nil, fmt.Errorf("invalid quantity %d for product: %s", product.Quantity, product.ProductID)
 		}
 	}
 
-	err = checkForIngredients(s, updatedOrder)
+	// order, err := s.orderRepo.FindByID(id)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	requiredIngredients, err := countRequired(s, updatedOrder)
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	conflicts, err := compareIngredients(s, updatedOrder, requiredIngredients)
+	if err != nil {
+		return conflicts, err
+	}
+
+	if len(conflicts) != 0 {
+		return conflicts, nil
+	} else {
+		err := orderResult(s, requiredIngredients)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// var missingMenuItems []models.OrderItem
+
+	// for _, menuItem := range order.Items {
+	// 	exists := false
+	// 	for _, menuUpdatedItem := range updatedOrder.Items {
+	// 		if menuItem.ProductID == menuUpdatedItem.ProductID {
+	// 			exists = true
+	// 		}
+	// 	}
+
+	// 	if !exists {
+	// 		missingMenuItems = append(missingMenuItems, menuItem)
+	// 	}
+	// }
+
+	// err = checkForIngredients(s, updatedOrder)
+	// if err != nil {
+	// 	return err
+	// }
 
 	err = s.orderRepo.Update(id, updatedOrder)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return nil, nil
 }
 
-func checkForIngredients(s *OrderServ, order models.Order) error {
-	invItems, err := s.invRepo.FindAll()
-	if err != nil {
-		return err
+func validateOrder(s *OrderServ, order models.Order) ([]string, error) {
+	var validateConflicts []string
+
+	_, err := s.orderRepo.FindByID(order.ID)
+	if err == nil {
+		validateConflicts = append(validateConflicts, models.ErrAlreadyExists.Error())
 	}
 
-	var reducedItems []models.InventoryItem
-	noIngredient := false
-	requiredIngredients := make(map[string]string)
+	if order.ID == "" {
+		validateConflicts = append(validateConflicts, "order id is empty")
+	}
 
+	if order.CustomerName == "" {
+		validateConflicts = append(validateConflicts, "customer name is empty")
+	}
+
+	if len(order.Items) == 0 {
+		validateConflicts = append(validateConflicts, "order items is empty")
+	}
+	return validateConflicts, nil
+}
+
+func countRequired(s *OrderServ, order models.Order) (map[string]float64, error) {
+	requiredIngredients := make(map[string]float64)
 	for _, menuItem := range order.Items {
 		if menuItem.Quantity < 0 {
-			return fmt.Errorf("menu item %s has negative value", menuItem.ProductID)
+			return nil, fmt.Errorf("menu item %s has negative value", menuItem.ProductID)
 		}
+
 		item, err := s.menuRepo.FindByID(menuItem.ProductID)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		for _, ingredient := range item.Ingredients {
 			if ingredient.Quantity < 0 {
-				return fmt.Errorf("ingredient %s has negative value", ingredient.IngredientID)
+				requiredIngredients[ingredient.IngredientID] = -1
+				// return nil, fmt.Errorf("ingredient %s has negative value", ingredient.IngredientID)
 			}
-			ingredientFound := false
-			for i, invItem := range invItems {
-				if invItems[i].IngredientID == ingredient.IngredientID {
-					ingredientFound = true
-					_, ok := requiredIngredients[ingredient.IngredientID]
-					if ok {
-						requiredIngredients[ingredient.IngredientID] = strings.Trim(requiredIngredients[ingredient.IngredientID], invItems[i].Unit)
-						temp, err := strconv.Atoi(requiredIngredients[ingredient.IngredientID])
-						if err != nil {
-							return err
-						}
-						temp += int(ingredient.Quantity) * menuItem.Quantity
-						requiredIngredients[ingredient.IngredientID] = strconv.Itoa(temp) + invItems[i].Unit
-						temp = 0
-					} else {
-						requiredIngredients[ingredient.IngredientID] = strconv.Itoa(int(ingredient.Quantity)*menuItem.Quantity) + invItems[i].Unit
-					}
-					if ingredient.Quantity*float64(menuItem.Quantity) > invItems[i].Quantity {
-						noIngredient = true
-					} else {
-						reducedQuantity := ingredient.Quantity * float64(menuItem.Quantity)
-						invItems[i].Quantity -= reducedQuantity
-						s.invRepo.Update(invItems[i].IngredientID, invItems[i])
-						invItem.Quantity = reducedQuantity
-						reducedItems = append(reducedItems, invItem)
-					}
+			if _, err := s.invRepo.FindByID(ingredient.IngredientID); err == nil {
+				if _, ok := requiredIngredients[ingredient.IngredientID]; ok {
+					requiredIngredients[ingredient.IngredientID] += ingredient.Quantity * float64(menuItem.Quantity)
+				} else {
+					requiredIngredients[ingredient.IngredientID] = ingredient.Quantity * float64(menuItem.Quantity)
 				}
-			}
-			if !ingredientFound {
-				returnItems(s, reducedItems)
-				return fmt.Errorf("no ingredient found %s", ingredient.IngredientID)
+			} else {
+				requiredIngredients[ingredient.IngredientID] = -2
+				// return nil, fmt.Errorf("ingredient %s not found", ingredient.IngredientID)
 			}
 		}
 	}
-
-	if noIngredient {
-		if err := returnItems(s, reducedItems); err != nil {
-			return err
-		}
-
-		list := ""
-		for key, val := range requiredIngredients {
-			number := strings.TrimRightFunc(val, unicode.IsLetter)
-
-			req, err := strconv.Atoi(number)
-			if err != nil {
-				return err
-			}
-
-			ingredient, err := s.invRepo.FindByID(key)
-			if err != nil {
-				return err
-			}
-
-			avail := int(ingredient.Quantity)
-			if avail < req {
-				list += key + ". Required: " + val + " , Available: " + strconv.Itoa(int(ingredient.Quantity)) + ingredient.Unit + "."
-			}
-		}
-
-		return fmt.Errorf("Insufficient inventory for ingredient: " + list)
-	}
-
-	return nil
+	return requiredIngredients, nil
 }
 
-func returnItems(s *OrderServ, reducedItems []models.InventoryItem) error {
+func compareIngredients(s *OrderServ, order models.Order, requiredIngredients map[string]float64) ([]string, error) {
+	var conflicts []string
+
+	for key, val := range requiredIngredients {
+		var temp string
+		if val == -1 {
+			temp = "ingredient " + key + " has negative value"
+			conflicts = append(conflicts, temp)
+			continue
+		}
+
+		if val == -2 {
+			temp = "ingredient " + key + " not found"
+			conflicts = append(conflicts, temp)
+			continue
+		}
+
+		invItem, err := s.invRepo.FindByID(key)
+		if err != nil {
+			return conflicts, err
+		}
+		if val > invItem.Quantity {
+			temp = "Insufficient inventory for ingredient '" + key + "'. Required: " + strconv.Itoa(int(val)) + invItem.Unit + ", Available: " + strconv.Itoa(int(invItem.Quantity)) + invItem.Unit
+			conflicts = append(conflicts, temp)
+		}
+	}
+	return conflicts, nil
+}
+
+func orderResult(s *OrderServ, requiredIngredients map[string]float64) error {
 	invItems, err := s.invRepo.FindAll()
 	if err != nil {
 		return err
 	}
-
-	for i := range invItems {
-		for _, reducedItem := range reducedItems {
-			if invItems[i].IngredientID == reducedItem.IngredientID {
-				invItems[i].Quantity += reducedItem.Quantity
-				s.invRepo.Update(invItems[i].IngredientID, invItems[i])
+	for key, val := range requiredIngredients {
+		for i := range invItems {
+			if invItems[i].IngredientID == key {
+				invItems[i].Quantity -= val
+				if err := s.invRepo.Update(key, invItems[i]); err != nil {
+					return nil
+				}
 			}
 		}
 	}

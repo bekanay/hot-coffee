@@ -31,12 +31,24 @@ func (h *OrderHandler) Orders(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		err := h.svc.CreateOrder(newOrder)
+		conflicts, err := h.svc.CreateOrder(newOrder)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		if len(conflicts) != 0 {
+			text := ""
+			for _, conflict := range conflicts {
+				text += conflict
+				text += "\n"
+			}
+			http.Error(w, text, http.StatusBadRequest)
+			return
+		}
 		w.WriteHeader(http.StatusCreated)
+	default:
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
 	}
 }
 
@@ -77,9 +89,18 @@ func (h *OrderHandler) OrderByID(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			err := h.svc.UpdateOrder(parts[2], order)
+			conflicts, err := h.svc.UpdateOrder(parts[2], order)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			if len(conflicts) != 0 {
+				text := ""
+				for _, conflict := range conflicts {
+					text += conflict
+					text += "\n"
+				}
+				http.Error(w, text, http.StatusBadRequest)
 				return
 			}
 		case http.MethodDelete:
@@ -89,6 +110,9 @@ func (h *OrderHandler) OrderByID(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			w.WriteHeader(http.StatusNoContent)
+		default:
+			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+			return
 		}
 	} else {
 		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)

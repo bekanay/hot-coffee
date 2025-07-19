@@ -39,7 +39,7 @@ func (s *menuServ) AddMenuItem(item models.MenuItem) error {
 		}
 	}
 
-	slog.Debug("AddMenuItem: loading existing menu items")
+	slog.Info("AddMenuItem: loading existing menu items")
 	menuItems, _ := s.menuRepo.FindAll()
 
 	for _, exist := range menuItems {
@@ -52,7 +52,7 @@ func (s *menuServ) AddMenuItem(item models.MenuItem) error {
 			return fmt.Errorf("Menu item name already exists")
 		}
 
-		slog.Debug("AddMenuItem: checking inventory for ingredients")
+		slog.Info("AddMenuItem: checking inventory for ingredients")
 		inventoryItems, _ := s.invRepo.FindAll()
 		var matchedIngredients []string
 		for _, invItem := range inventoryItems {
@@ -89,7 +89,7 @@ func (s *menuServ) AddMenuItem(item models.MenuItem) error {
 		}
 	}
 
-	slog.Debug("AddMenuItem: saving new menu item to repo")
+	slog.Info("AddMenuItem: saving new menu item to repo")
 	err := s.menuRepo.Add(item)
 	if err != nil {
 		slog.Error("AddMenuItem: repo.Add failed", "err", err)
@@ -127,7 +127,7 @@ func (s *menuServ) UpdateMenuItem(id string, updatedItem models.MenuItem) error 
 		slog.Warn("UpdateMenuItem: non-positive price", "price", updatedItem.Price)
 		return fmt.Errorf("price must be non-negative")
 	}
-	slog.Debug("UpdateMenuItem: passing update to repo", "id", id)
+	slog.Info("UpdateMenuItem: passing update to repo", "id", id)
 	err := s.menuRepo.Update(id, updatedItem)
 	if err != nil {
 		slog.Error("UpdateMenuItem: repo.Update failed", "id", id, "err", err)

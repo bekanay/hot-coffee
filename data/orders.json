@@ -96,7 +96,43 @@
         "quantity": 1
       }
     ],
-    "status": "open",
+    "status": "closed",
     "created_at": "2025-07-19T17:03:37Z"
+  },
+  {
+    "order_id": "T001",
+    "customer_name": "Alice",
+    "items": [
+      {
+        "product_id": "latte",
+        "quantity": 2
+      },
+      {
+        "product_id": "americano",
+        "quantity": 1
+      }
+    ],
+    "status": "closed",
+    "created_at": "2025-07-19T17:37:18Z"
+  },
+  {
+    "order_id": "bekaaaaa",
+    "customer_name": "Beka",
+    "items": [
+      {
+        "product_id": "espresso",
+        "quantity": 2
+      },
+      {
+        "product_id": "americano",
+        "quantity": 5
+      },
+      {
+        "product_id": "latte",
+        "quantity": 1
+      }
+    ],
+    "status": "closed",
+    "created_at": "2025-07-19T16:18:07Z"
   }
 ]

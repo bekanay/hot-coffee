@@ -29,7 +29,7 @@ func NewJSONMenuRepo(dir string) MenuRepository {
 
 func (r *jsonMenuRepo) loadMenuItems() ([]models.MenuItem, error) {
 	path := filepath.Join(r.dataDir, "menu_items.json")
-	slog.Debug("loadMenuItems", "path", path)
+	slog.Info("loadMenuItems", "path", path)
 
 	raw, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -42,12 +42,12 @@ func (r *jsonMenuRepo) loadMenuItems() ([]models.MenuItem, error) {
 		return nil, err
 	}
 
-	slog.Debug("loadMenuItems: success", "count", len(menuItems))
+	slog.Info("loadMenuItems: success", "count", len(menuItems))
 	return menuItems, nil
 }
 
 func (r *jsonMenuRepo) saveMenuItems(menuItems []models.MenuItem) error {
-	slog.Debug("saveMenuItems: called", "count", len(menuItems))
+	slog.Info("saveMenuItems: called", "count", len(menuItems))
 	raw, err := json.MarshalIndent(menuItems, "", "  ")
 	if err != nil {
 		slog.Error("saveMenuItems: MarshalIndent failed", "err", err)
@@ -82,7 +82,7 @@ func (r *jsonMenuRepo) Add(menuItem models.MenuItem) error {
 			return fmt.Errorf("Menu item name already exists")
 		}
 	}
-	slog.Debug("Add: appending item")
+	slog.Info("Add: appending item")
 	menuItems = append(menuItems, menuItem)
 
 	if err := r.saveMenuItems(menuItems); err != nil {
@@ -96,7 +96,7 @@ func (r *jsonMenuRepo) Add(menuItem models.MenuItem) error {
 func (r *jsonMenuRepo) FindAll() ([]models.MenuItem, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	slog.Debug("FindAll: called")
+	slog.Info("FindAll: called")
 
 	items, err := r.loadMenuItems()
 	if err != nil {
@@ -111,7 +111,7 @@ func (r *jsonMenuRepo) FindByID(id string) (*models.MenuItem, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	slog.Debug("FindByID: called", "id", id)
+	slog.Info("FindByID: called", "id", id)
 	menuItems, err := r.loadMenuItems()
 	if err != nil {
 		slog.Error("FindByID: loadMenuItems failed", "err", err)
@@ -141,7 +141,7 @@ func (r *jsonMenuRepo) Update(id string, updated models.MenuItem) error {
 
 	for i, item := range menuItems {
 		if item.ID == id {
-			slog.Debug("Update: applying update", "index", i)
+			slog.Info("Update: applying update", "index", i)
 			menuItems[i] = updated
 			if err := r.saveMenuItems(menuItems); err != nil {
 				slog.Error("Update: saveMenuItems failed", "err", err)

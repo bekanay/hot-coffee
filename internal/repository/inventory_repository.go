@@ -40,7 +40,7 @@ func (r *jsonInventoryRepo) loadInventory() ([]models.InventoryItem, error) {
 		return nil, err
 	}
 
-	slog.Debug("loadInventory: success", "count", len(inventory))
+	slog.Info("loadInventory: success", "count", len(inventory))
 	return inventory, nil
 }
 
@@ -50,7 +50,7 @@ func (r *jsonInventoryRepo) saveInventory(inventory []models.InventoryItem) erro
 		return err
 	}
 	path := filepath.Join(r.dataDir, "inventory.json")
-	slog.Debug("saving inventory file", "path", path, "count", len(inventory))
+	slog.Info("saving inventory file", "path", path, "count", len(inventory))
 	return ioutil.WriteFile(path, raw, 0o644)
 }
 
@@ -87,7 +87,7 @@ func (r *jsonInventoryRepo) Add(item models.InventoryItem) error {
 func (r *jsonInventoryRepo) FindAll() ([]models.InventoryItem, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	slog.Debug("FindAll: called")
+	slog.Info("FindAll: called")
 	inventory, err := r.loadInventory()
 	if err != nil {
 		slog.Error("FindAll: loadInventory failed", "err", err)
@@ -101,7 +101,7 @@ func (r *jsonInventoryRepo) FindByID(id string) (*models.InventoryItem, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	slog.Debug("FindByID: called", "id", id)
+	slog.Info("FindByID: called", "id", id)
 	inventory, err := r.loadInventory()
 	if err != nil {
 		slog.Error("FindByID: loadInventory failed", "err", err)

@@ -2,7 +2,7 @@
   {
     "ingredient_id": "espresso_shot",
     "name": "Espresso Shot",
-    "quantity": 498,
+    "quantity": 475,
     "unit": "shots"
   },
   {
@@ -14,7 +14,7 @@
   {
     "ingredient_id": "hot_water",
     "name": "Hot Water",
-    "quantity": 20600,
+    "quantity": 18350,
     "unit": "ml"
   },
   {
@@ -26,13 +26,13 @@
   {
     "ingredient_id": "milk",
     "name": "Milk",
-    "quantity": 600,
+    "quantity": 0,
     "unit": "g"
   },
   {
-    "ingredient_id": "butter",
-    "name": "Butter",
+    "ingredient_id": "",
+    "name": "beka Latte",
     "quantity": 0,
-    "unit": "g"
+    "unit": ""
   }
 ]

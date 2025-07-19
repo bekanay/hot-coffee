@@ -94,7 +94,7 @@ func (r *jsonOrderRepo) FindByID(id string) (*models.Order, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	slog.Debug("FindByID", "orderID", id)
+	slog.Info("FindByID", "orderID", id)
 	orders, err := r.loadOrders()
 	if err != nil {
 		slog.Error("FindByID: loadOrders failed", "err", err)

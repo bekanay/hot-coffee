@@ -30,7 +30,7 @@ func (s *inventoryServ) AddInventoryItem(item models.InventoryItem) error {
 		return fmt.Errorf("quantity must be non-negative")
 	}
 
-	slog.Debug("AddInventoryItem: passing to repo", "id", item.IngredientID)
+	slog.Info("AddInventoryItem: passing to repo", "id", item.IngredientID)
 	err := s.repo.Add(item)
 	if err != nil {
 		slog.Error("AddInventoryItem: repo.Add failed", "err", err)
@@ -70,7 +70,7 @@ func (s *inventoryServ) UpdateInventoryItem(id string, updatedItem models.Invent
 		return fmt.Errorf("quantity must be non-negative")
 	}
 
-	slog.Debug("UpdateInventoryItem: passing to repo", "id", id)
+	slog.Info("UpdateInventoryItem: passing to repo", "id", id)
 	err := s.repo.Update(id, updatedItem)
 	if err != nil {
 		slog.Error("UpdateInventoryItem: repo.Update failed", "id", id, "err", err)

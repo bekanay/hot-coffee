@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"hot-coffee/internal/service"
 	"hot-coffee/models"
+	"log/slog"
 	"net/http"
 	"strings"
 )
@@ -17,147 +18,217 @@ func NewOrderHandler(orderService service.OrderService) *OrderHandler {
 }
 
 func (h *OrderHandler) Orders(w http.ResponseWriter, r *http.Request) {
+	slog.Info("Orders endpoint hit",
+		slog.String("method", r.Method),
+		slog.String("path", r.URL.Path),
+	)
+
 	switch r.Method {
 	case http.MethodGet:
 		orders, err := h.svc.GetOrders()
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			slog.Error("GetOrders failed",
+				slog.Any("error", err),
+			)
+			writeJSONError(w, http.StatusInternalServerError, err.Error())
+			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(orders)
+		if err := json.NewEncoder(w).Encode(orders); err != nil {
+			slog.Error("Encode orders failed",
+				slog.Any("error", err),
+			)
+		}
+
 	case http.MethodPost:
 		var newOrder models.Order
 		if err := json.NewDecoder(r.Body).Decode(&newOrder); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			slog.Error("Decode new order failed",
+				slog.Any("error", err),
+			)
+			writeJSONError(w, http.StatusBadRequest, err.Error())
 			return
 		}
+
 		conflicts, err := h.svc.CreateOrder(newOrder)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			slog.Error("CreateOrder failed",
+				slog.Any("error", err),
+			)
+			if strings.Contains(err.Error(), "invalid quantity") {
+				writeJSONError(w, http.StatusBadRequest, err.Error())
+			} else {
+				writeJSONError(w, http.StatusInternalServerError, err.Error())
+			}
 			return
 		}
 		if len(conflicts) != 0 {
-			text := ""
-			for _, conflict := range conflicts {
-				text += conflict
-				text += "\n"
-			}
-			http.Error(w, text, http.StatusBadRequest)
+			msg := strings.Join(conflicts, "\n")
+			slog.Warn("CreateOrder conflicts",
+				slog.String("conflicts", msg),
+			)
+			writeJSONError(w, http.StatusBadRequest, msg)
 			return
 		}
+
 		w.WriteHeader(http.StatusCreated)
+
 	default:
-		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
-		return
+		writeJSONError(w, http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
 	}
 }
 
 func (h *OrderHandler) OrderByID(w http.ResponseWriter, r *http.Request) {
+	slog.Info("OrderByID endpoint hit",
+		slog.String("method", r.Method),
+		slog.String("path", r.URL.Path),
+	)
+
 	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) == 4 {
-		if r.Method == http.MethodPost {
-			if parts[3] != "close" {
-				http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
-				return
-			}
-			err := h.svc.CloseOrder(parts[2])
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-		} else {
-			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
-			return
+	// POST /orders/{id}/close
+	if len(parts) == 4 && r.Method == http.MethodPost && parts[3] == "close" {
+		if err := h.svc.CloseOrder(parts[2]); err != nil {
+			slog.Error("CloseOrder failed",
+				slog.String("order_id", parts[2]),
+				slog.Any("error", err),
+			)
+			writeJSONError(w, http.StatusInternalServerError, err.Error())
 		}
-	} else if len(parts) == 3 {
+		return
+	}
+
+	// GET, PUT, DELETE /orders/{id}
+	if len(parts) == 3 {
+		id := parts[2]
 		switch r.Method {
 		case http.MethodGet:
-			order, err := h.svc.GetOrderById(parts[2])
+			order, err := h.svc.GetOrderById(id)
 			if err != nil {
+				slog.Error("GetOrderById failed",
+					slog.String("order_id", id),
+					slog.Any("error", err),
+				)
 				if strings.Contains(err.Error(), "not found") {
-					http.Error(w, err.Error(), http.StatusNotFound)
-					return
+					writeJSONError(w, http.StatusNotFound, err.Error())
+				} else {
+					writeJSONError(w, http.StatusInternalServerError, err.Error())
 				}
-				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			w.Header().Set("Content-Type", "json/application")
-			json.NewEncoder(w).Encode(order)
-		case http.MethodPut:
-			var order models.Order
-			if err := json.NewDecoder(r.Body).Decode(&order); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
+			w.Header().Set("Content-Type", "application/json")
+			if err := json.NewEncoder(w).Encode(order); err != nil {
+				slog.Error("Encode order failed",
+					slog.Any("error", err),
+				)
 			}
 
-			conflicts, err := h.svc.UpdateOrder(parts[2], order)
+		case http.MethodPut:
+			var upd models.Order
+			if err := json.NewDecoder(r.Body).Decode(&upd); err != nil {
+				slog.Error("Decode update order failed",
+					slog.Any("error", err),
+				)
+				writeJSONError(w, http.StatusBadRequest, err.Error())
+				return
+			}
+			conflicts, err := h.svc.UpdateOrder(id, upd)
 			if err != nil {
-				if strings.Contains(err.Error(), "not found") {
-					http.Error(w, err.Error(), http.StatusNotFound)
-					return
+				slog.Error("UpdateOrder failed",
+					slog.String("order_id", id),
+					slog.Any("error", err),
+				)
+				switch {
+				case strings.Contains(err.Error(), "not found"):
+					writeJSONError(w, http.StatusNotFound, err.Error())
+				case err.Error() == "items cannot be empty":
+					writeJSONError(w, http.StatusBadRequest, err.Error())
+				default:
+					writeJSONError(w, http.StatusInternalServerError, err.Error())
 				}
-				if err.Error() == "items cannot be empty" {
-					http.Error(w, err.Error(), http.StatusBadRequest)
-					return
-				}
-				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 			if len(conflicts) != 0 {
-				text := ""
-				for _, conflict := range conflicts {
-					text += conflict
-					text += "\n"
-				}
-				http.Error(w, text, http.StatusBadRequest)
-				return
-			}
-		case http.MethodDelete:
-			err := h.svc.DeleteOrder(parts[2])
-			if err != nil {
-				if strings.Contains(err.Error(), "not found") {
-					http.Error(w, err.Error(), http.StatusNotFound)
-					return
-				}
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				msg := strings.Join(conflicts, "\n")
+				slog.Warn("UpdateOrder conflicts",
+					slog.String("order_id", id),
+					slog.String("conflicts", msg),
+				)
+				writeJSONError(w, http.StatusBadRequest, msg)
 				return
 			}
 			w.WriteHeader(http.StatusNoContent)
+
+		case http.MethodDelete:
+			if err := h.svc.DeleteOrder(id); err != nil {
+				slog.Error("DeleteOrder failed",
+					slog.String("order_id", id),
+					slog.Any("error", err),
+				)
+				if strings.Contains(err.Error(), "not found") {
+					writeJSONError(w, http.StatusNotFound, err.Error())
+				} else {
+					writeJSONError(w, http.StatusInternalServerError, err.Error())
+				}
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
+
 		default:
-			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
-			return
+			writeJSONError(w, http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
 		}
-	} else {
-		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 		return
 	}
+
+	writeJSONError(w, http.StatusNotFound, http.StatusText(http.StatusNotFound))
 }
 
 func (h *OrderHandler) GetTotalSales(w http.ResponseWriter, r *http.Request) {
+	slog.Info("GetTotalSales endpoint hit",
+		slog.String("method", r.Method),
+		slog.String("path", r.URL.Path),
+	)
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		writeJSONError(w, http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
 		return
 	}
 
 	totalSales, err := h.svc.GetTotalSales()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		slog.Error("GetTotalSales failed",
+			slog.Any("error", err),
+		)
+		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(totalSales)
+	if err := json.NewEncoder(w).Encode(totalSales); err != nil {
+		slog.Error("Encode totalSales failed",
+			slog.Any("error", err),
+		)
+	}
 }
 
 func (h *OrderHandler) GetPopularMenuItems(w http.ResponseWriter, r *http.Request) {
+	slog.Info("GetPopularMenuItems endpoint hit",
+		slog.String("method", r.Method),
+		slog.String("path", r.URL.Path),
+	)
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		writeJSONError(w, http.StatusMethodNotAllowed, http.StatusText(http.StatusMethodNotAllowed))
 		return
 	}
-	popularMenuItems, err := h.svc.GetPopularMenuItems()
+	items, err := h.svc.GetPopularMenuItems()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		slog.Error("GetPopularMenuItems failed",
+			slog.Any("error", err),
+		)
+		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(popularMenuItems)
+	if err := json.NewEncoder(w).Encode(items); err != nil {
+		slog.Error("Encode popular items failed",
+			slog.Any("error", err),
+		)
+	}
 }

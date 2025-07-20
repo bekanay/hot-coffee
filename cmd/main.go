@@ -46,6 +46,7 @@ func main() {
 	orderHandler := handler.NewOrderHandler(orderSvc)
 	menuHandler := handler.NewMenuHandler(menuSvc)
 	invHandler := handler.NewInventoryHandler(invSvc)
+	adminHandler := handler.NewAdminHandler(*dir)
 
 	mux := http.NewServeMux()
 
@@ -60,6 +61,8 @@ func main() {
 
 	mux.HandleFunc("/reports/total-sales", orderHandler.GetTotalSales)
 	mux.HandleFunc("/reports/popular-items", orderHandler.GetPopularMenuItems)
+
+	mux.HandleFunc("/reset", adminHandler.ResetAll)
 
 	slog.Info("Listening", "address", *port)
 	err := http.ListenAndServe(*port, mux)

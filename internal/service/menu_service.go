@@ -2,9 +2,10 @@ package service
 
 import (
 	"fmt"
+	"log/slog"
+
 	"hot-coffee/internal/repository"
 	"hot-coffee/models"
-	"log/slog"
 )
 
 type MenuService interface {

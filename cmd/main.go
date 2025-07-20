@@ -3,13 +3,14 @@ package main
 import (
 	"flag"
 	"fmt"
-	"hot-coffee/internal/handler"
-	"hot-coffee/internal/repository"
-	"hot-coffee/internal/service"
 	"log"
 	"log/slog"
 	"net/http"
 	"os"
+
+	"hot-coffee/internal/handler"
+	"hot-coffee/internal/repository"
+	"hot-coffee/internal/service"
 )
 
 func main() {

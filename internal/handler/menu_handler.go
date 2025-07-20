@@ -2,11 +2,12 @@ package handler
 
 import (
 	"encoding/json"
-	"hot-coffee/internal/service"
-	"hot-coffee/models"
 	"log/slog"
 	"net/http"
 	"strings"
+
+	"hot-coffee/internal/service"
+	"hot-coffee/models"
 )
 
 type MenuHandler struct {

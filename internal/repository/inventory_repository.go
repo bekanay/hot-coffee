@@ -3,11 +3,12 @@ package repository
 import (
 	"encoding/json"
 	"fmt"
-	"hot-coffee/models"
 	"io/ioutil"
 	"log/slog"
 	"path/filepath"
 	"sync"
+
+	"hot-coffee/models"
 )
 
 type InventoryRepository interface {

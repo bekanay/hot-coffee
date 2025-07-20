@@ -3,11 +3,12 @@ package repository
 import (
 	"encoding/json"
 	"fmt"
-	"hot-coffee/models"
 	"io/ioutil"
 	"log/slog"
 	"path/filepath"
 	"sync"
+
+	"hot-coffee/models"
 )
 
 type MenuRepository interface {
@@ -54,7 +55,7 @@ func (r *jsonMenuRepo) saveMenuItems(menuItems []models.MenuItem) error {
 		return err
 	}
 	path := filepath.Join(r.dataDir, "menu_items.json")
-	if err := ioutil.WriteFile(path, raw, 0644); err != nil {
+	if err := ioutil.WriteFile(path, raw, 0o644); err != nil {
 		slog.Error("saveMenuItems: WriteFile failed", "path", path, "err", err)
 		return err
 	}

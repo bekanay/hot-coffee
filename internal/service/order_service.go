@@ -2,12 +2,13 @@ package service
 
 import (
 	"fmt"
-	"hot-coffee/internal/repository"
-	"hot-coffee/models"
 	"log/slog"
 	"sort"
 	"strconv"
 	"time"
+
+	"hot-coffee/internal/repository"
+	"hot-coffee/models"
 )
 
 type OrderService interface {

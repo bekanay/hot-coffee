@@ -2,7 +2,7 @@
   {
     "ingredient_id": "espresso_shot",
     "name": "Espresso Shot",
-    "quantity": 475,
+    "quantity": 171,
     "unit": "shots"
   },
   {
@@ -26,8 +26,8 @@
   {
     "ingredient_id": "milk",
     "name": "Milk",
-    "quantity": 0,
-    "unit": "g"
+    "quantity": 1800,
+    "unit": "ml"
   },
   {
     "ingredient_id": "",

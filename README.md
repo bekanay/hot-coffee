@@ -16,29 +16,12 @@ A simple coffee shop management system written in Go, using JSON files for data 
     * [API Endpoints](#api-endpoints)
 * [Logging](#logging)
 * [Testing](#testing)
-* [License](#license)
 
 ## Features
 
 * **Orders**: Create, retrieve, update, delete, and close orders.
 * **Menu Items**: Manage menu items and their ingredients.
 * **Inventory**: Track ingredient stock levels and enforce business rules when placing orders.
-
-## Prerequisites
-
-* Go 1.20+
-* Git
-
-## Installation
-
-```bash
-# Clone the repository
-git clone https://platform.alem.school/git/rasagandy/hot-coffee.git
-cd hot-coffee
-
-# Build the server
-go build -o hot-coffee ./cmd
-```
 
 ## Project Structure
 
@@ -137,6 +120,3 @@ Unit tests live in the `tests/` directory. Run:
 go test ./internal/repository ./internal/service -v
 ```
 
-## License
-
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
